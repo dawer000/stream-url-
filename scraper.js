@@ -1,54 +1,44 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
 
 async function runScraper() {
-    console.log("Launching browser...");
-    // 1. Non-Headless simulation: Hum isay headless: false kar rahe hain
-    // GitHub par ye tab bhi nahi dikhega, lekin is se site ka behavior change ho sakta hai
     const browser = await puppeteer.launch({
-        headless: false, // Non-Headless simulation
+        headless: "new",
         args: [
-            '--no-sandbox',
+            '--no-sandbox', 
             '--disable-setuid-sandbox',
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins,site-per-process', // Frame handle karne ke liye
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         ]
     });
     
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 }); // Screen size set karein
     
-    // Create 'debug' folder to store screenshots
-    if (!fs.existsSync('debug')) { fs.mkdirSync('debug'); }
+    // Page load hone se pehle user-agent set kar diya
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
 
-    // Request Sniffing wahi rahega
+    // Request interception
+    await page.setRequestInterception(true);
+    page.on('request', (req) => req.continue());
+    
     page.on('response', async (res) => {
         const url = res.url();
         if (url.includes('.m3u8')) {
-            console.log(">>> FOUND LINK: " + url);
+            console.log(">>> FINAL LINK FOUND: " + url);
         }
     });
 
     console.log("Navigating...");
-    await page.goto('https://vsembed.ru/embed/tv?tmdb=1399&season=1&episode=1&ds_lang=de', { waitUntil: 'networkidle0' });
-    
-    // Screenshot 1: After page load
-    await page.screenshot({ path: 'debug/1_loaded.png' });
-    console.log("Screenshot 1 taken.");
+    await page.goto('https://vsembed.ru/embed/tv?tmdb=1399&season=1&episode=1&ds_lang=de', { waitUntil: 'networkidle2' });
 
-    // Har frame me click aur screenshot lena
-    const frames = page.frames();
-    for (let i = 0; i < frames.length; i++) {
-        try {
-            console.log(`Checking frame ${i}...`);
-            await frames[i].click('body'); 
-            await page.screenshot({ path: `debug/2_clicked_frame_${i}.png` });
-            console.log(`Clicked and screenshotted frame ${i}.`);
-        } catch (e) {}
+    // Click trigger - Kuch sites par button ko double click ya delay chahiye hota hai
+    try {
+        await page.waitForSelector('#pl_but', { timeout: 10000 });
+        console.log("Play button found. Clicking...");
+        await page.click('#pl_but');
+    } catch (e) {
+        console.log("Button click failed, but let's wait...");
     }
 
-    console.log("Waiting for network activity...");
-    await new Promise(r => setTimeout(r, 20000)); // 20 sec wait
+    await new Promise(r => setTimeout(r, 25000)); // 25 seconds ka wait
     await browser.close();
 }
 
