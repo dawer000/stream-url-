@@ -1,17 +1,11 @@
-name: Test Scraper
-on:
-  workflow_dispatch: # Taake aap manual button daba kar check kar sakein
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: npm install puppeteer
-      - name: Run Script
+- name: Run Scraper
         run: node scraper.js
+        # Error aye to ignore karo takay step 3 chale
+        continue-on-error: true 
+
+      - name: Upload Screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          # 'debug' folder upload kar do
+          path: debug/
