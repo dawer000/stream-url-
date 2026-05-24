@@ -1,13 +1,14 @@
 const puppeteer = require('puppeteer');
 
 async function runScraper() {
-    console.log("Launching browser...");
     const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     const page = await browser.newPage();
+    
+    // Asli browser jaisa dikhne ke liye User-Agent
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-    // 1. Network Traffic Monitor (Ad-blocking + Link Sniffing)
     await page.setRequestInterception(true);
     page.on('request', (req) => {
         const url = req.url();
@@ -17,21 +18,21 @@ async function runScraper() {
         req.continue();
     });
 
-    // 2. VidSrc Page Load
-    console.log("Navigating to target...");
+    console.log("Navigating...");
+    // VidSrc ka URL
     await page.goto('https://vidsrc.to/embed/movie/tt1375666', { waitUntil: 'networkidle2' });
 
-    // 3. Simulation: Play Button Click
+    // Play button par click karne ke liye thoda wait
     try {
-        await page.waitForSelector('body', { timeout: 5000 });
-        await page.click('body'); // VidSrc aksar pure body par click karne se player activate hota hai
-        console.log("Clicked play button...");
+        await page.waitForSelector('body', { timeout: 10000 });
+        await page.mouse.click(500, 300); // Screen ke beech mein click
+        console.log("Clicked play...");
     } catch(e) {
-        console.log("Play button not found, maybe auto-started.");
+        console.log("Could not click, but checking network...");
     }
 
-    // 4. Wait for stream to load
-    await new Promise(r => setTimeout(r, 10000));
+    // 15 seconds ka wait taake link load ho jaye
+    await new Promise(r => setTimeout(r, 15000));
     await browser.close();
 }
 
